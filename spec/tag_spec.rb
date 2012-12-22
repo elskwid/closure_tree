@@ -166,49 +166,6 @@ shared_examples_for Tag do
       d.add_child(e) # "d.children << e" would work too, of course
       h.ancestry_path.should == %w(a b c d e f g h)
     end
-
-    it "builds hash_tree properly" do
-      {
-        16 => nil,
-        30 => nil,
-        35 => nil,
-        36 => nil,
-        37 => nil,
-        40 => nil,
-
-        21 => 16,
-        24 => 16,
-        27 => 16,
-        31 => 30,
-        34 => 30,
-
-        22 => 21,
-        23 => 21,
-        25 => 24,
-        26 => 24,
-        28 => 27,
-        29 => 27,
-        32 => 31,
-        33 => 31,
-
-        38 => 23,
-        39 => 26
-      }.each do |id, parent_id|
-        Tag.create! do |t|
-          t.id = id
-          t.parent_id = parent_id
-          t.name = t.id
-        end
-      end
-      Tag.rebuild!
-      # no second, third or forth level nodes:
-      Tag.hash_tree(:limit_depth => 1).to_json.should ==
-        '{"16":{},"30":{},"35":{},"36":{},"37":{},"40":{}}'
-      # no third or forth level nodes:
-      Tag.hash_tree(:limit_depth => 2).to_json.should ==
-        '{"16":{"21":{},"24":{},"27":{}},"30":{"31":{},"34":{}},"35":{},"36":{},"37":{},"40":{}}'
-    end
-
   end
 
   describe "Tag with fixtures" do

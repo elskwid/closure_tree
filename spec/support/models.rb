@@ -61,3 +61,8 @@ end
 class CuisineType < ActiveRecord::Base
   acts_as_tree
 end
+
+class Page < ActiveRecord::Base
+  has_paper_trail
+  acts_as_tree :order => 'sort_order'
+end

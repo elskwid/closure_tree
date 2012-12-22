@@ -13,6 +13,7 @@ require 'active_record'
 require 'action_controller' # rspec-rails needs this :(
 
 require 'closure_tree'
+require 'paper_trail'
 
 #log = Logger.new(STDOUT)
 #log.sev_threshold = Logger::DEBUG
