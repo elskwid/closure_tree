@@ -322,13 +322,15 @@ module ClosureTree
       children.each { |c| c.rebuild! }
 
       # Store descendant depth of path in all generations
+      # See comments in #delete_hierarchy_references regarding MySQL awesomeness
       connection.execute <<-SQL
         UPDATE #{quoted_hierarchy_table_name}
         SET depth = (
-          SELECT COUNT(descendant_id)
-          FROM #{quoted_hierarchy_table_name}
-          WHERE descendant_id = #{self.id}
-        )
+          SELECT descendants_count
+          FROM ( SELECT COUNT(descendant_id) as descendants_count
+            FROM #{quoted_hierarchy_table_name}
+            WHERE descendant_id = #{self.id}
+          ) AS descendants )
         WHERE descendant_id = #{self.id}
       SQL
     end
