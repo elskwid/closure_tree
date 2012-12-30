@@ -117,13 +117,16 @@ module ClosureTree
         tree
       end
 
-      def find_all_by_generation(generation_level)
-        scope = joins(:self_and_ancestors)
-
-        scope = scope.where(<<-SQL)
-          #{quoted_hierarchy_table_name}.generations = #{generation_level}
-          AND #{quoted_hierarchy_table_name}.generations =
-            (#{quoted_hierarchy_table_name}.depth - 1)
+      def self.find_all_by_generation(generation_level)
+        # Use subselect since we don't need data from the other table
+        scope = where(<<-SQL)
+          #{quoted_table_name}.#{primary_key} IN (
+            SELECT #{quoted_hierarchy_table_name}.descendant_id
+            FROM #{quoted_hierarchy_table_name}
+            WHERE #{quoted_hierarchy_table_name}.generations = #{generation_level}
+            AND #{quoted_hierarchy_table_name}.generations =
+              (#{quoted_hierarchy_table_name}.depth - 1)
+          )
         SQL
 
         order_option ? scope.order(order_option) : scope
