@@ -90,31 +90,22 @@ module ClosureTree
 
       # Note that options[:limit_depth] defaults to 10. This might be crazy-big, depending on your tree shape.
       def self.hash_tree(options = {})
-        tree = ActiveSupport::OrderedHash.new
-        id_to_hash = {}
         limit_depth = (options[:limit_depth] || 10).to_i
 
-        # Simple join with hierarchy for ancestor, descendant, and generation
-        scope = joins(:self_and_ancestors)
+        build_nested_hash do |scope|
+          # Simple join with hierarchy for ancestor, descendant, and generation
+          scope = scope.joins(:self_and_ancestors)
 
-        # Limit depth and filter self-references (eases pressure on hash build)
-        scope = scope.where(<<-SQL)
-          #{quoted_hierarchy_table_name}.depth <= #{limit_depth}
-          AND (#{quoted_table_name}.parent_id IS NULL
-            OR #{quoted_hierarchy_table_name}.generations > 0)
-        SQL
+          # Limit depth and filter self-references (eases pressure on hash build)
+          scope = scope.where(<<-SQL)
+            #{quoted_hierarchy_table_name}.depth <= #{limit_depth}
+            AND (#{quoted_table_name}.parent_id IS NULL
+              OR #{quoted_hierarchy_table_name}.generations > 0)
+          SQL
 
-        scope = scope.order(append_order("#{quoted_hierarchy_table_name}.depth"))
-
-        scope.each do |ea|
-          h = id_to_hash[ea.id] = ActiveSupport::OrderedHash.new
-          if ea.root?
-            tree[ea] = h
-          else
-            id_to_hash[ea.ct_parent_id][ea] = h
-          end
+          # return scope for nested_hash
+          scope.order(append_order("#{quoted_hierarchy_table_name}.depth"))
         end
-        tree
       end
 
       def self.find_all_by_generation(generation_level)
@@ -266,19 +257,14 @@ module ClosureTree
     end
 
     def hash_tree(options = {})
-      tree = ActiveSupport::OrderedHash.new
-      tree[self] = ActiveSupport::OrderedHash.new
-      id_to_hash = {self.id => tree[self]}
-      scope = descendants
-      if options[:limit_depth]
-        limit_depth = options[:limit_depth]
-        return {} if limit_depth <= 0
-        scope = scope.where("generations <= #{limit_depth - 1}")
+      limit_depth = options[:limit_depth]
+      return {} if limit_depth && limit_depth <= 0
+
+      build_nested_hash(self) do
+        scope = descendants
+        scope = scope.where("generations <= #{limit_depth - 1}") if limit_depth
+        scope # return scope for nested_hash
       end
-      scope.each do |ea|
-        id_to_hash[ea.ct_parent_id][ea] = (id_to_hash[ea.id] = ActiveSupport::OrderedHash.new)
-      end
-      tree
     end
 
     def ct_parent_id
@@ -371,6 +357,10 @@ module ClosureTree
       end
     end
 
+    def build_nested_hash(root = nil, &block)
+      self.class.build_nested_hash(root, &block)
+    end
+
     # TODO: _parent_id will be removed in the next major version
     alias :_parent_id :ct_parent_id
 
@@ -405,6 +395,31 @@ module ClosureTree
           root = create!(attributes.merge(name_sym => name))
         end
         root.find_or_create_by_path(path, attributes)
+      end
+
+      # Yields the unscoped model to the block and uses the scope returned
+      def build_nested_hash(root = nil)
+        if block_given?
+          tree = ActiveSupport::OrderedHash.new
+          id_to_hash = {}
+
+          if root
+            tree[root] = ActiveSupport::OrderedHash.new
+            id_to_hash = {root.id => tree[root]}
+          end
+
+          tree_scope = yield(unscoped)
+
+          tree_scope.each do |ea|
+            h = id_to_hash[ea.id] = ActiveSupport::OrderedHash.new
+            if ea.root?
+              tree[ea] = h
+            else
+              id_to_hash[ea.ct_parent_id][ea] = h
+            end
+          end
+          tree
+        end
       end
     end
   end
