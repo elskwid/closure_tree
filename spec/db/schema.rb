@@ -24,6 +24,7 @@ ActiveRecord::Schema.define(:version => 0) do
     t.integer "ancestor_id", :null => false
     t.integer "descendant_id", :null => false
     t.integer "generations", :null => false
+    t.integer "depth"
   end
 
   create_table "destroyed_tags", :force => true do |t|
@@ -48,6 +49,7 @@ ActiveRecord::Schema.define(:version => 0) do
     t.integer "ancestor_id", :null => false
     t.integer "descendant_id", :null => false
     t.integer "generations", :null => false
+    t.integer "depth"
   end
 
   force_add_index "referral_hierarchies", [:ancestor_id, :descendant_id], :unique => true, :name => "ref_anc_desc_idx"
@@ -64,6 +66,7 @@ ActiveRecord::Schema.define(:version => 0) do
     t.integer "ancestor_id", :null => false
     t.integer "descendant_id", :null => false
     t.integer "generations", :null => false
+    t.integer "depth"
   end
 
   force_add_index "label_hierarchies", [:ancestor_id, :descendant_id], :unique => true, :name => "lh_anc_desc_idx"
@@ -78,5 +81,6 @@ ActiveRecord::Schema.define(:version => 0) do
     t.integer "ancestor_id", :null => false
     t.integer "descendant_id", :null => false
     t.integer "generations", :null => false
+    t.integer "depth"
   end
 end

@@ -331,7 +331,19 @@ module ClosureTree
           WHERE x.descendant_id = #{self.ct_parent_id}
         SQL
       end
+
       children.each { |c| c.rebuild! }
+
+      # Store descendant depth of path in all generations
+      connection.execute <<-SQL
+        UPDATE #{quoted_hierarchy_table_name}
+        SET depth = (
+          SELECT COUNT(descendant_id)
+          FROM #{quoted_hierarchy_table_name}
+          WHERE descendant_id = #{self.id}
+        )
+        WHERE descendant_id = #{self.id}
+      SQL
     end
 
     def ct_before_destroy
